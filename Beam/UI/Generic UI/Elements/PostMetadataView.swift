@@ -15,6 +15,20 @@ protocol PostMetadataViewDelegate: class {
     func postMetdataView(_ metadataView: PostMetadataView, didTapUsernameOnPost post: Post)
     func postMetdataView(_ metadataView: PostMetadataView, didTapSubredditOnPost post: Post)
 }
+public func distinguishedColor(for post: Post) -> UIColor {
+    if let distinguishedType = post.distinguished {
+        switch distinguishedType {
+        case "admin":
+            return #colorLiteral(red: 0.8666666667, green: 0.1843137255, blue: 0.137254902, alpha: 1)
+        case "moderator":
+            return #colorLiteral(red: 0.3047083318, green: 0.6231384277, blue: 0.2308172882, alpha: 1)
+        default:
+            return DisplayModeValue(UIColor(red: 127 / 225, green: 127 / 225, blue: 127 / 225, alpha: 1.0), darkValue: UIColor(red: 153 / 225, green: 153 / 225, blue: 153 / 225, alpha: 1.0))
+        }
+    } else {
+        return DisplayModeValue(UIColor(red: 127 / 225, green: 127 / 225, blue: 127 / 225, alpha: 1.0), darkValue: UIColor(red: 153 / 225, green: 153 / 225, blue: 153 / 225, alpha: 1.0))
+    }
+}
 
 @IBDesignable
 class PostMetdataSeperatorView: BeamView {
@@ -275,7 +289,7 @@ class PostMetadataView: BeamView {
         self.dateLabel.text = self.post?.creationDate?.localizedRelativeTimeString
         self.userButton.setTitle(self.post?.author, for: .normal)
         self.subredditButton.setTitle(self.post?.subreddit?.displayName, for: .normal)
-        
+
         if let URLString = self.post?.urlString, let URL = URL(string: URLString) {
             self.domainLabel.text = URL.host?.replacingOccurrences(of: "www.", with: "")
         }
@@ -287,7 +301,12 @@ class PostMetadataView: BeamView {
         } else {
             self.gildedView.count = 0
         }
-        
+        if let post = self.post {
+            if post.removed == 1 {
+                self.backgroundColor = #colorLiteral(red: 1, green: 0.3098039216, blue: 0.2666666667, alpha: 1)
+            }
+//            self.userButton.setTitleColor(distinguishedColor(for: post), for: UIControlState())
+        }
         self.updateLayout()
         
         self.setNeedsLayout()
@@ -375,7 +394,13 @@ class PostMetadataView: BeamView {
     }
     
     fileprivate func updateButtonTitleColorsAndState() {
-        self.userButton.setTitleColor(self.highlightButtons ? self.tintColor.withAlphaComponent(1) : UIColor.beamPurpleLight(), for: UIControlState())
+        if let post = self.post {
+            if post.distinguished != nil {
+                self.userButton.setTitleColor(distinguishedColor(for: post), for: UIControlState())
+            } else {
+                self.userButton.setTitleColor(self.highlightButtons ? self.tintColor.withAlphaComponent(1) : UIColor.beamPurpleLight(), for: UIControlState())
+            }
+        }
         self.subredditButton.setTitleColor(self.highlightButtons ? self.tintColor.withAlphaComponent(1) : UIColor.beamPurpleLight(), for: UIControlState())
     }
     

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="14460.15" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES">
+    <device id="retina4_7" orientation="portrait">
+        <adaptation id="fullscreen"/>
+    </device>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="14460.9"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" selectionStyle="none" indentationWidth="10" reuseIdentifier="title" rowHeight="80" id="GYL-Lf-QfO" userLabel="Title" customClass="PostTitlePartCell" customModule="beam">
+            <rect key="frame" x="0.0" y="0.0" width="600" height="80"/>
+            <autoresizingMask key="autoresizingMask"/>
+            <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" tableViewCell="GYL-Lf-QfO" id="jb1-Sg-Li9">
+                <rect key="frame" x="0.0" y="0.0" width="600" height="79.5"/>
+                <autoresizingMask key="autoresizingMask"/>
+                <subviews>
+                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="750" lineBreakMode="wordWrap" numberOfLines="40" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="b4Y-p4-5Le" customClass="BeamCopyableLabel" customModule="beam" customModuleProvider="target">
+                        <rect key="frame" x="20" y="13" width="537" height="66.5"/>
+                        <directionalEdgeInsets key="directionalLayoutMargins" top="8" leading="8" bottom="8" trailing="8"/>
+                        <string key="text">Lorem ipsum dolor sit er elit lamet, consectetaur cillium adipisicing pecu, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua</string>
+                        <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
+                        <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <nil key="highlightedColor"/>
+                    </label>
+                    <button opaque="NO" clearsContextBeforeDrawing="NO" alpha="0.0" tag="1" contentMode="scaleToFill" enabled="NO" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="CEq-N6-dCa">
+                        <rect key="frame" x="565" y="35.5" width="15" height="22"/>
+                        <color key="tintColor" red="0.25098039220000001" green="0.56862745100000001" blue="0.1764705882" alpha="1" colorSpace="calibratedRGB"/>
+                        <state key="normal" title="" image="approve"/>
+                        <connections>
+                            <action selector="didTapApprovedButton:" destination="GYL-Lf-QfO" eventType="touchUpInside" id="hfI-2O-BMf"/>
+                        </connections>
+                    </button>
+                    <button opaque="NO" clearsContextBeforeDrawing="NO" alpha="0.0" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="dOp-Wv-R8S">
+                        <rect key="frame" x="562" y="35.5" width="20" height="22"/>
+                        <color key="tintColor" name="systemRedColor" catalog="System" colorSpace="catalog"/>
+                        <state key="normal" image="remove"/>
+                        <connections>
+                            <action selector="didTapRemovedButton:" destination="GYL-Lf-QfO" eventType="touchUpInside" id="lYB-GA-aYT"/>
+                        </connections>
+                    </button>
+                </subviews>
+                <constraints>
+                    <constraint firstAttribute="trailingMargin" secondItem="b4Y-p4-5Le" secondAttribute="trailing" constant="23" id="4Kd-9D-RLj"/>
+                    <constraint firstAttribute="trailing" secondItem="CEq-N6-dCa" secondAttribute="trailing" constant="20" id="9FN-7N-PdB"/>
+                    <constraint firstAttribute="bottom" secondItem="b4Y-p4-5Le" secondAttribute="bottom" id="MU1-lx-chd"/>
+                    <constraint firstItem="b4Y-p4-5Le" firstAttribute="leading" secondItem="jb1-Sg-Li9" secondAttribute="leadingMargin" id="Mjr-Po-1TK"/>
+                    <constraint firstItem="dOp-Wv-R8S" firstAttribute="leading" secondItem="b4Y-p4-5Le" secondAttribute="trailing" constant="5" id="axy-Eb-PqS"/>
+                    <constraint firstItem="dOp-Wv-R8S" firstAttribute="centerY" secondItem="b4Y-p4-5Le" secondAttribute="centerY" id="eYY-Bo-eSD"/>
+                    <constraint firstItem="CEq-N6-dCa" firstAttribute="centerY" secondItem="b4Y-p4-5Le" secondAttribute="centerY" id="hfA-J5-MqW"/>
+                    <constraint firstItem="b4Y-p4-5Le" firstAttribute="top" secondItem="jb1-Sg-Li9" secondAttribute="topMargin" constant="2" id="qep-Kr-tfh"/>
+                </constraints>
+            </tableViewCellContentView>
+            <edgeInsets key="layoutMargins" top="8" left="12" bottom="8" right="12"/>
+            <inset key="separatorInset" minX="10000" minY="0.0" maxX="0.0" maxY="0.0"/>
+            <userDefinedRuntimeAttributes>
+                <userDefinedRuntimeAttribute type="boolean" keyPath="showTopSeperator" value="NO"/>
+            </userDefinedRuntimeAttributes>
+            <connections>
+                <outlet property="approvedButton" destination="CEq-N6-dCa" id="sPc-8H-tOG"/>
+                <outlet property="bottomLayoutConstraint" destination="MU1-lx-chd" id="c1E-vz-GNL"/>
+                <outlet property="removedButton" destination="dOp-Wv-R8S" id="fWH-Fg-cTF"/>
+                <outlet property="titleLabel" destination="b4Y-p4-5Le" id="c9y-zh-H9Z"/>
+            </connections>
+            <point key="canvasLocation" x="148.80000000000001" y="48.575712143928037"/>
+        </tableViewCell>
+    </objects>
+    <resources>
+        <image name="approve" width="15" height="15"/>
+        <image name="remove" width="20" height="20"/>
+    </resources>
+</document>

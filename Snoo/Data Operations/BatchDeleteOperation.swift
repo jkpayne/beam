@@ -30,7 +30,7 @@ final class BatchDeleteOperation: DataOperation {
             self.objectContext = DataController.shared.privateContext
         }
         
-        self.objectContext!.performAndWait { () -> Void in
+         self.objectContext!.performAndWait { () -> Void in
             guard self.isCancelled == false else {
                 return
             }

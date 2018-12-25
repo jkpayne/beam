@@ -14,14 +14,15 @@ import Trekker
 final class SubredditsViewControllerSection: NSObject {
     var sectionName: String
     var subreddits: [Subreddit]
-    
+
     init(_ sectionName: String, _ subreddits: [Subreddit]) {
         self.sectionName = sectionName
         self.subreddits = subreddits
         super.init()
     }
-    
+
 }
+
 
 final class SubredditsViewController: BeamTableViewController, BeamViewControllerLoading {
     
@@ -678,7 +679,7 @@ extension SubredditsViewController {
             callback(true)
             
         })
-        favoriteAction.backgroundColor = .yellow
+        favoriteAction.backgroundColor = UIColor.beamBlue()
         actions.append(favoriteAction)
         
         let config = UISwipeActionsConfiguration(actions: actions)

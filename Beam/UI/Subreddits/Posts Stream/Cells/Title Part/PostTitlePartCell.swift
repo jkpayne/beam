@@ -34,8 +34,20 @@ final class PostTitlePartCell: BeamTableViewCell, PostCell {
                     self.titleThumbnailViewConstraint?.isActive = false
                     self.metadataThumbnailViewConstraint?.isActive = false
                 }
+
             }
-            
+            if self.post?.approved == 1 {
+                self.approvedButton.alpha = 1.0
+                self.removedButton.isHidden = true
+                self.removedButton.alpha = 0.0
+            } else if self.post?.removed == 1 {
+                self.approvedButton.alpha = 0.0
+                self.approvedButton.isHidden = true
+                self.removedButton.isHidden = false
+                self.removedButton.alpha = 1.0
+                self.backgroundColor = #colorLiteral(red: 1, green: 0.3098039216, blue: 0.2666666667, alpha: 1)
+            } 
+
             self.reloadTitleColor()
             
             self.setNeedsLayout()
@@ -67,6 +79,57 @@ final class PostTitlePartCell: BeamTableViewCell, PostCell {
         return NSAttributedString(string: title, attributes: attributes)
     }
 
+  
+    @IBAction func didTapRemovedButton(_ sender: UIButton) {
+    }
+    @IBAction func didTapApprovedButton(_ sender: UIButton) {
+        if let post = self.post {
+            var approvedByString = ""
+
+            if post.approved == 1 {
+                if let approvedBy = post.approvedBy {
+                    let dateFormatter = DateFormatter()
+                    dateFormatter.dateStyle = .short
+                    dateFormatter.timeStyle = .short
+
+                    if let date = post.approvedAtUtc {
+                        let postApprovedAt = dateFormatter.string(from: date as Date)
+                        print(postApprovedAt)
+                        approvedByString = "Approved by: \(approvedBy) at \(postApprovedAt)"
+                    } else {
+                        print("There was an error decoding the string")
+                        approvedByString = "Approved by: \(approvedBy)"
+                    }
+                    let viewController = BeamAlertController(title: approvedByString, message: nil, preferredStyle: .alert)
+                    viewController.present(viewController, animated: true, completion: nil)
+                }
+            }
+            var removedByString = ""
+
+            if post.removed == 1 {
+                if let removedBy = post.bannedBy {
+                    let dateFormatter = DateFormatter()
+                    dateFormatter.dateStyle = .short
+                    dateFormatter.timeStyle = .short
+
+                    if let date = post.bannedAtUtc {
+                        let postRemovedAt = dateFormatter.string(from: date as Date)
+                        print(postRemovedAt)
+                        removedByString = "Removed by: \(removedBy) at \(postRemovedAt)"
+                    } else {
+                        print("There was an error decoding the string")
+                        removedByString = "Removed by: \(removedBy)"
+                    }
+                    let viewController = BeamAlertController(title: removedByString, message: nil, preferredStyle: .alert)
+                    viewController.present(viewController, animated: true, completion: nil)
+                }
+            }
+
+
+        }
+    }
+    @IBOutlet var removedButton: UIButton!
+    @IBOutlet var approvedButton: UIButton!
     @IBOutlet var titleLabel: UILabel!
     @IBOutlet var thumbnailView: PostTitleThumbnailView?
     @IBOutlet var titleThumbnailViewConstraint: NSLayoutConstraint?
@@ -117,6 +180,7 @@ final class PostTitlePartCell: BeamTableViewCell, PostCell {
         
         NotificationCenter.default.addObserver(self, selector: #selector(PostTitlePartCell.postDidChangeVisitedState(_:)), name: .PostDidChangeVisitedState, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(PostTitlePartCell.contentSizeCategoryDidChange(_:)), name: .FontSizeCategoryDidChange, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(PostTitlePartCell.contentApprovedStateDidChange(_:)), name: .PostDidChangeApprovedState, object: nil)
         
         self.reloadFont()
         
@@ -139,11 +203,12 @@ final class PostTitlePartCell: BeamTableViewCell, PostCell {
             }
         } else {
             var useBottomSpacing = !UserSettings[.showPostMetadata]
-            if  self.post?.isSelfText.boolValue == true && NSString(string: self.post?.content ?? "").length > 0 {
+            if self.post?.isSelfText.boolValue == true && NSString(string: self.post?.content ?? "").length > 0 {
                 useBottomSpacing = false
             }
             self.bottomLayoutConstraint?.constant = (useBottomSpacing ? 10: 0)
         }
+
     }
     
     func reloadFont() {
@@ -153,8 +218,22 @@ final class PostTitlePartCell: BeamTableViewCell, PostCell {
         } else {
             self.titleLabel.font = UIFont.systemFont(ofSize: fontSize)
         }
+        postApprovedChanged()
     }
-    
+    func postApprovedChanged() {
+        if self.post?.approved == 1 {
+            self.approvedButton.alpha = 1.0
+            self.removedButton.isHidden = true
+            self.removedButton.alpha = 0.0
+        } else if self.post?.removed == 1 {
+            self.approvedButton.alpha = 0.0
+            self.approvedButton.isHidden = true
+            self.removedButton.isHidden = false
+            self.removedButton.alpha = 1.0
+            self.backgroundColor = #colorLiteral(red: 1, green: 0.3098039216, blue: 0.2666666667, alpha: 1)
+        }
+    }
+
     override func displayModeDidChange() {
         super.displayModeDidChange()
 
@@ -166,7 +245,10 @@ final class PostTitlePartCell: BeamTableViewCell, PostCell {
         self.thumbnailView?.backgroundColor = self.contentView.backgroundColor
         
         self.topSeperatorView?.backgroundColor = DisplayModeValue(UIColor.beamGreyExtraExtraLight(), darkValue: UIColor.beamDarkTableViewSeperatorColor())
-        
+//        if post?.approved == 1 {
+//            self.approvedButton.tintColor = #colorLiteral(red: 0.3047083318, green: 0.6231384277, blue: 0.2308172882, alpha: 1)
+//            self.approvedButton.alpha = 1.0
+//        }
     }
     
     func reloadTitleColor() {
@@ -187,7 +269,7 @@ final class PostTitlePartCell: BeamTableViewCell, PostCell {
     @objc fileprivate func contentSizeCategoryDidChange(_ notification: Notification) {
         self.reloadFont()
     }
-    
+
     @objc fileprivate func postDidChangeVisitedState(_ notification: Notification) {
         DispatchQueue.main.async {
             if let post = notification.object as? Post, post == self.post {
@@ -195,7 +277,14 @@ final class PostTitlePartCell: BeamTableViewCell, PostCell {
             }
         }
     }
-    
+
+    @objc fileprivate func contentApprovedStateDidChange(_ notification: Notification) {
+        DispatchQueue.main.async {
+            if let post = notification.object as? Post, post == self.post {
+                self.postApprovedChanged()
+            }
+        }
+    }
     @objc fileprivate func thumbnailTapped(_ sender: AnyObject) {
         if let post = self.post, let imageView = self.thumbnailView?.mediaImageView {
             self.delegate?.titlePartCell(self, didTapThumbnail: imageView, onPost: post)

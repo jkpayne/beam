@@ -22,7 +22,7 @@ class DeadZonesScrollView: UIScrollView {
     /**
      The deadzones in the UIScrollView. These are relative to the normal bounds of the scrollView
      If the initial touch of a scroll is in one of these rects, the scrolling doesn't start.
-    */
+     */
     var deadZones: [CGRect]?
     
     override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -82,9 +82,11 @@ enum CommentCellAction {
 }
 
 class CommentCell: BaseCommentCell {
-    
+
+    @IBOutlet var reportCountView: ReportCountView!
     @IBOutlet fileprivate weak var collapseIconImageView: UIImageView!
     
+    @IBOutlet var moderatorButton: UIButton!
     @IBOutlet fileprivate weak var authorButton: BeamPlainButton!
     @IBOutlet weak var contentLabel: TTTAttributedLabel!
     @IBOutlet fileprivate weak var metadataLabel: UILabel!
@@ -95,14 +97,18 @@ class CommentCell: BaseCommentCell {
     
     @IBOutlet fileprivate var gildCountView: GildCountView!
     
+    @IBOutlet var usernoteLabelToCommentLabel: NSLayoutConstraint!
+    @IBOutlet var moderatorStackViewHeigth: NSLayoutConstraint!
     @IBOutlet fileprivate var commentContentViewLeadingConstraint: NSLayoutConstraint!
     @IBOutlet fileprivate var commentContentViewTrailingConstraint: NSLayoutConstraint!
     @IBOutlet fileprivate var stackViewToCollapseArrowConstraint: NSLayoutConstraint!
     //The constraint from the comment's content (text) to the link preview button below it.
     @IBOutlet fileprivate var contentToCommentLinkPreviewConstraint: NSLayoutConstraint!
-    
+    @IBOutlet var moderatorStackView: UIStackView!
+    @IBOutlet var approvedButton: UIButton!
+    @IBOutlet var removedButton: UIButton!
+    @IBOutlet var usernoteLabel: UILabel!
     @IBOutlet fileprivate var scrollView: DeadZonesScrollView!
-    
     @IBOutlet fileprivate var leftIconImageView: UIImageView!
     @IBOutlet fileprivate var rightIconImageView: UIImageView!
     
@@ -131,7 +137,8 @@ class CommentCell: BaseCommentCell {
     }()
     
     //This property is true when the comment on the cell has changed during the setting, use this property to optimize performance by not changing content that has changed
-    
+
+
     override func reloadContents() {
         super.reloadContents()
         
@@ -166,11 +173,18 @@ class CommentCell: BaseCommentCell {
         let showsLinkPreview = links.count > 0 && !self.isCollapsed
         
         self.contentToCommentLinkPreviewConstraint.isActive = showsLinkPreview
+        if self.comment?.canModPost != 1 {
+            self.usernoteLabelToCommentLabel.isActive = false
+            self.usernoteLabel.isHidden = true
+            self.moderatorStackView.isHidden = true
+            self.moderatorStackViewHeigth.constant = 0
+        }
         self.commentLinkPreview.isHidden = !showsLinkPreview
         if showsLinkPreview {
             self.commentLinkPreview.comment = self.comment
             self.commentLinkPreview.link = links.first
         }
+     
         
         self.contentLabel.isHidden = self.isCollapsed
         
@@ -244,12 +258,14 @@ class CommentCell: BaseCommentCell {
         self.reloadMetaData()
         
         if self.isCollapsed == false {
+
             self.contentLabel.linkAttributes = TTTAttributedLabel.beamLinkAttributesForMode(self.displayMode)
             self.contentLabel.activeLinkAttributes = TTTAttributedLabel.beamActiveLinkAttributesForMode(self.displayMode)
             if let comment = comment, let contentString = comment.content {
                 if comment.markdownString == nil {
                     comment.markdownString = MarkdownString(string: contentString.stringByTrimmingTrailingWhitespacesAndNewLines())
                 }
+                updateModBar(comment)
                 self.contentLabel.setText(comment.markdownString?.attributedStringWithStylesheet(self.contentStylesheet))
             } else {
                 self.contentLabel.attributedText = nil
@@ -263,6 +279,32 @@ class CommentCell: BaseCommentCell {
         longPressGestureRecognizer.isEnabled = true
     }
     
+    fileprivate func updateModBar(_ comment: Comment) {
+        if comment.canModPost == 1 {
+            if let reportCount = comment.numReports?.intValue, reportCount > 0 {
+                self.reportCountView.count = reportCount
+                self.reportCountView.isHidden = false
+            } else {
+                self.reportCountView.isHidden = true
+            }
+            moderatorStackView.isHidden = false
+            
+            if comment.approved == 1 {
+                self.approvedButton.alpha = 1
+                self.removedButton.alpha = 0
+            } else if comment.removed == 1 {
+                self.approvedButton.alpha = 0
+                self.removedButton.alpha = 1
+            } else {
+                self.approvedButton.alpha = 0
+                self.removedButton.alpha = 0
+            }
+
+        } else {
+            moderatorStackView.isHidden = true
+        }
+    }
+
     func reloadMetaData() {
         guard self.comment?.hasBeenDeleted == false else {
             self.metadataLabel.text = nil
@@ -295,7 +337,7 @@ class CommentCell: BaseCommentCell {
                 if score.intValue == 1 || score.intValue == -1 {
                     localizedPoints = NSLocalizedString("point-inline", comment: "")
                 }
-                    
+                
                 metadata.append(NSAttributedString(string: "\(score.intValue) \(localizedPoints)", attributes: [NSAttributedStringKey.foregroundColor: pointsTextColor]))
             }
             
@@ -311,6 +353,7 @@ class CommentCell: BaseCommentCell {
             } else {
                 self.gildCountView.isHidden = true
             }
+            updateModBar(comment)
         }
         let attributedString = NSMutableAttributedString()
         for meta in metadata {
@@ -323,6 +366,7 @@ class CommentCell: BaseCommentCell {
     }
     
     fileprivate func reloadAuthorTextColor() {
+
         let authorIsOriginalPoster = (comment?.author == comment?.post?.author)
         var titleColor = DisplayModeValue(UIColor(red: 12 / 255, green: 11 / 255, blue: 13 / 255, alpha: 1), darkValue: UIColor(red: 217 / 255, green: 217 / 255, blue: 217 / 255, alpha: 1.0))
         if authorIsOriginalPoster && !self.isCollapsed {
@@ -449,7 +493,7 @@ class CommentCell: BaseCommentCell {
 }
 
 extension CommentCell: UIScrollViewDelegate {
-
+    
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if self.scrollView.isDragging {
             let action = self.actionForContentOffset(scrollView.contentOffset)
@@ -462,7 +506,7 @@ extension CommentCell: UIScrollViewDelegate {
                 imageView = self.rightIconImageView
             }
             imageView.image = action.icon()
-        
+            
             UIView.animate(withDuration: animationDuration, animations: { () -> Void in
                 self.scrollView.backgroundColor = action.backgroundColor()
                 if action == CommentCellAction.none {

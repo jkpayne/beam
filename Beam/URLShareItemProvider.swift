@@ -15,10 +15,10 @@ final class URLShareItemProvider: UIActivityItemProvider {
 
     var object: SyncObject
     var redditUrl: URL
-    
+
     init(object: SyncObject) {
         self.object = object
-        
+
         var redditUrl: URL!
         if let objectRedditUrl = self.object.redditUrl {
             redditUrl = objectRedditUrl
@@ -32,17 +32,17 @@ final class URLShareItemProvider: UIActivityItemProvider {
     override var item: Any {
         return self.redditUrl
     }
-    
+
     public override func activityViewController(_ activityViewController: UIActivityViewController, dataTypeIdentifierForActivityType activityType: UIActivityType?) -> String {
         return kUTTypeURL as String
     }
-    
+
     override func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
         return self.item
     }
-    
+
     override func activityViewController(_ activityViewController: UIActivityViewController, itemForActivityType activityType: UIActivityType?) -> Any? {
         return self.item
     }
-    
+
 }

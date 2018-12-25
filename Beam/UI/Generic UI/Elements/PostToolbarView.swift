@@ -12,6 +12,30 @@ import AWKGallery
 import CherryKit
 import Trekker
 
+enum moderatorAction {
+    case distinguish
+    case undistinguish
+    case sticky
+    case unsticky
+    case approve
+    case reapprove
+    case remove
+    case markSpam
+    case markNsfw
+    case markSpoiler
+    case unmarkSpam
+    case unmarkNsfw
+    case unmarkSpoiler
+//    case setPostFlair
+    case announce
+    case unannounce
+    case lock
+    case unlock
+    case ignoreReports
+    case unignoreReports
+//    case banUser
+//    case viewReports
+}
 protocol PostToolbarViewDelegate: class {
     
     func postToolbarView(_ toolbarView: PostToolbarView, didTapCommentsOnPost post: Post)
@@ -20,10 +44,16 @@ protocol PostToolbarViewDelegate: class {
     func postToolbarView(_ toolbarView: PostToolbarView, didTapUpvoteOnPost post: Post)
     func postToolbarView(_ toolbarView: PostToolbarView, didTapDownvoteOnPost post: Post)
     
+    
+    func postToolbarView(_ toolbarView: PostToolbarView, didTapModeratorOnPost post: Post)
     func visibleSubredditForToolbarView(_ toolbarView: PostToolbarView) -> Subreddit?
     
 }
-
+fileprivate enum moderateType {
+    case post
+    case comment
+    case subreddit
+}
 extension PostToolbarViewDelegate where Self: UIViewController {
     
     func postToolbarView(_ toolbarView: PostToolbarView, didTapUpvoteOnPost post: Post) {
@@ -90,6 +120,11 @@ extension PostToolbarViewDelegate where Self: UIViewController {
         self.modallyPresentToolBarActionViewController(activityViewController, toolbarView: toolbarView, sender: toolbarView.moreButton)
     }
     
+    func postToolbarView(_ toolbarView: PostToolbarView, didTapModeratorOnPost post: Post) {
+        let viewController = moderate(post: post)
+        self.present(viewController, animated: true, completion: nil)
+    }
+    
     fileprivate func vote(_ status: VoteStatus, forPost post: Post, toolbarView: PostToolbarView) {
         guard AppDelegate.shared.authenticationController.isAuthenticated else {
             let alertController = UIAlertController.unauthenticatedAlertController(UnauthenticatedAlertType.VotePost)
@@ -97,21 +132,7 @@ extension PostToolbarViewDelegate where Self: UIViewController {
             return
         }
         
-        guard post.locked.boolValue == false && post.archived.boolValue == false else {
-            if let viewController = self as? NoticeHandling {
-                let message = post.locked.boolValue == true ? AWKLocalizedString("locked-error-message") : AWKLocalizedString("archived-error-message")
-                let title = post.locked.boolValue == true ? AWKLocalizedString("locked") : AWKLocalizedString("archived")
-                if self.shownInGallery() {
-                    let alertController = BeamAlertController(title: title, message: message, preferredStyle: UIAlertControllerStyle.alert)
-                    alertController.addCloseAction()
-                    self.modallyPresentToolBarActionViewController(alertController, toolbarView: toolbarView)
-                } else {
-                    viewController.presentErrorMessage(message)
-                }
-                
-            }
-            return
-        }
+        
         
         if UserSettings[.postMarking] {
             post.markVisited()
@@ -166,6 +187,560 @@ extension PostToolbarViewDelegate where Self: UIViewController {
             self.present(viewController, animated: true, completion: nil)
         }
     }
+    fileprivate func modallyPresentToolBarModeratorActionViewController(_ viewController: UIViewController, toolbarView: PostToolbarView, sender: UIControl? = nil) {
+        //        if let viewController as? BeamAlertController {
+        
+        self.present(viewController, animated: true, completion: nil)
+        //        }
+    }
+    func moderatorActionHandler(action: moderatorAction, post: Post) {
+        switch action {
+        case .distinguish:
+            let operation = post.distinguish(true, authenticationController: AppDelegate.shared.authenticationController)
+            DataController.shared.executeAndSaveOperations([operation], context: AppDelegate.shared.managedObjectContext, handler: { (error: Error?) -> Void in
+                DispatchQueue.main.async(execute: { () -> Void in
+                    if error != nil {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentErrorMessage("Error Distinguishing!")
+                        }
+                    } else {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentModeratorSuccessMessage("Distinguished!")
+                        }
+                        NotificationCenter.default.post(name: .PostDidChangeApprovedState, object: post)
+                    }
+                })
+            })
+        case .undistinguish:
+            let operation = post.distinguish(false, authenticationController: AppDelegate.shared.authenticationController)
+            DataController.shared.executeAndSaveOperations([operation], context: AppDelegate.shared.managedObjectContext, handler: { (error: Error?) -> Void in
+                DispatchQueue.main.async(execute: { () -> Void in
+                    if error != nil {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentErrorMessage("Error Unistinguishing!")
+                        }
+                    } else {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentModeratorSuccessMessage("Unistinguished!")
+                        }
+                        NotificationCenter.default.post(name: .PostDidChangeApprovedState, object: post)
+                    }
+                })
+            })
+        case .sticky:
+            let operation = post.sticky(authenticationController: AppDelegate.shared.authenticationController)
+            DataController.shared.executeAndSaveOperations([operation], context: AppDelegate.shared.managedObjectContext, handler: { (error: Error?) -> Void in
+                DispatchQueue.main.async(execute: { () -> Void in
+                    if error != nil {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentErrorMessage("Error Stickying!")
+                        }
+                    } else {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentModeratorSuccessMessage("Stickied!")
+                        }
+
+                    }
+                })
+            })
+        case .unsticky:
+            let operation = post.unsticky(keepDistinguished: true ,authenticationController: AppDelegate.shared.authenticationController)
+            DataController.shared.executeAndSaveOperations([operation], context: AppDelegate.shared.managedObjectContext, handler: { (error: Error?) -> Void in
+                DispatchQueue.main.async(execute: { () -> Void in
+                    if error != nil {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentErrorMessage("Error Unstickying!")
+                        }
+                    } else {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentModeratorSuccessMessage("Unstickied!")
+                        }
+
+                    }
+                })
+            })
+        case .approve:
+            let operation = post.approve(authenticationController: AppDelegate.shared.authenticationController)
+            DataController.shared.executeAndSaveOperations([operation], context: AppDelegate.shared.managedObjectContext, handler: { (error: Error?) -> Void in
+                DispatchQueue.main.async(execute: { () -> Void in
+                    if error != nil {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentErrorMessage("Error Approving!")
+                        }
+                    } else {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentModeratorSuccessMessage("Approved!")
+                        }
+
+                    }
+                })
+            })
+        case .reapprove:
+            let operation = post.approve(authenticationController: AppDelegate.shared.authenticationController)
+            DataController.shared.executeAndSaveOperations([operation], context: AppDelegate.shared.managedObjectContext, handler: { (error: Error?) -> Void in
+                DispatchQueue.main.async(execute: { () -> Void in
+                    if error != nil {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentErrorMessage("Error Reapproving!")
+                        }
+                    } else {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentModeratorSuccessMessage("Reapproved!")
+                        }
+
+                    }
+                })
+            })
+        case .remove:
+            let operation = post.remove(authenticationController: AppDelegate.shared.authenticationController)
+            DataController.shared.executeAndSaveOperations([operation], context: AppDelegate.shared.managedObjectContext, handler: { (error: Error?) -> Void in
+                DispatchQueue.main.async(execute: { () -> Void in
+                    if error != nil {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentErrorMessage("Error Removing!")
+                        }
+                    } else {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentModeratorSuccessMessage("Removed!")
+                        }
+
+                    }
+                })
+            })
+        case .markSpam:
+            let operation = post.markSpam(authenticationController: AppDelegate.shared.authenticationController)
+            DataController.shared.executeAndSaveOperations([operation], context: AppDelegate.shared.managedObjectContext, handler: { (error: Error?) -> Void in
+                DispatchQueue.main.async(execute: { () -> Void in
+                    if error != nil {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentErrorMessage("Error Marking Spam!")
+                        }
+                    } else {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentModeratorSuccessMessage("Marked Spam!")
+                        }
+
+                    }
+                })
+            })
+        case .markNsfw:
+            let operation = post.markNsfw(true, authenticationController: AppDelegate.shared.authenticationController)
+            DataController.shared.executeAndSaveOperations([operation], context: AppDelegate.shared.managedObjectContext, handler: { (error: Error?) -> Void in
+                DispatchQueue.main.async(execute: { () -> Void in
+                    if error != nil {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentErrorMessage("Error Marking NFSW!")
+                        }
+                    } else {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentModeratorSuccessMessage("Marked NFSW!")
+                        }
+
+                    }
+                })
+            })
+        case .markSpoiler:
+            let operation = post.markSpoiler(true, authenticationController: AppDelegate.shared.authenticationController)
+            DataController.shared.executeAndSaveOperations([operation], context: AppDelegate.shared.managedObjectContext, handler: { (error: Error?) -> Void in
+                DispatchQueue.main.async(execute: { () -> Void in
+                    if error != nil {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentErrorMessage("Error Marking Spoiler!")
+                        }
+                    } else {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentModeratorSuccessMessage("Marked Spoiler!")
+                        }
+
+                    }
+                })
+            })
+        case .unmarkSpam:
+            let operation = post.approve(authenticationController: AppDelegate.shared.authenticationController)
+            DataController.shared.executeAndSaveOperations([operation], context: AppDelegate.shared.managedObjectContext, handler: { (error: Error?) -> Void in
+                DispatchQueue.main.async(execute: { () -> Void in
+                    if error != nil {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentErrorMessage("Error Unmarking Spam!")
+                        }
+                    } else {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentModeratorSuccessMessage("Unmarked Spam!")
+                        }
+
+                    }
+                })
+            })
+        case .unmarkNsfw:
+            let operation = post.markNsfw(false, authenticationController: AppDelegate.shared.authenticationController)
+            DataController.shared.executeAndSaveOperations([operation], context: AppDelegate.shared.managedObjectContext, handler: { (error: Error?) -> Void in
+                DispatchQueue.main.async(execute: { () -> Void in
+                    if error != nil {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentErrorMessage("Error Unmarking NSFW!")
+                        }
+                    } else {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentModeratorSuccessMessage("Unmarked NSFW!")
+                        }
+
+                    }
+                })
+            })
+        case .unmarkSpoiler:
+            let operation = post.markNsfw(false, authenticationController: AppDelegate.shared.authenticationController)
+            DataController.shared.executeAndSaveOperations([operation], context: AppDelegate.shared.managedObjectContext, handler: { (error: Error?) -> Void in
+                DispatchQueue.main.async(execute: { () -> Void in
+                    if error != nil {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentErrorMessage("Error Unmarking NSFW!")
+                        }
+                    } else {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentModeratorSuccessMessage("Unmarked NSFW!")
+                        }
+
+                    }
+                })
+            })
+//        case .setPostFlair:
+
+        case .announce:
+            let operation = post.markSticky(true, authenticationController: AppDelegate.shared.authenticationController)
+            DataController.shared.executeAndSaveOperations([operation], context: AppDelegate.shared.managedObjectContext, handler: { (error: Error?) -> Void in
+                DispatchQueue.main.async(execute: { () -> Void in
+                    if error != nil {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentErrorMessage("Error Stickying Announcement!")
+                        }
+                    } else {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentModeratorSuccessMessage("Stickied Announcement!")
+                        }
+
+                    }
+                })
+            })
+        case .unannounce:
+            let operation = post.markSticky(false, authenticationController: AppDelegate.shared.authenticationController)
+            DataController.shared.executeAndSaveOperations([operation], context: AppDelegate.shared.managedObjectContext, handler: { (error: Error?) -> Void in
+                DispatchQueue.main.async(execute: { () -> Void in
+                    if error != nil {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentErrorMessage("Error Unstickying Announcement!")
+                        }
+                    } else {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentModeratorSuccessMessage("Unstickied Announcement!")
+                        }
+
+                    }
+                })
+            })
+        case .lock:
+            let operation = post.lock(true, authenticationController: AppDelegate.shared.authenticationController)
+            DataController.shared.executeAndSaveOperations([operation], context: AppDelegate.shared.managedObjectContext, handler: { (error: Error?) -> Void in
+                DispatchQueue.main.async(execute: { () -> Void in
+                    if error != nil {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentErrorMessage("Error Locking Thread!")
+                        }
+                    } else {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentModeratorSuccessMessage("Locked Thread!")
+                        }
+
+                    }
+                })
+            })
+        case .unlock:
+            let operation = post.lock(false, authenticationController: AppDelegate.shared.authenticationController)
+            DataController.shared.executeAndSaveOperations([operation], context: AppDelegate.shared.managedObjectContext, handler: { (error: Error?) -> Void in
+                DispatchQueue.main.async(execute: { () -> Void in
+                    if error != nil {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentErrorMessage("Error Unlocking Thread!")
+                        }
+                    } else {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentModeratorSuccessMessage("Unlocked Thread!")
+                        }
+
+                    }
+                })
+            })
+        case .ignoreReports:
+            let operation = post.ignoreReports(true, authenticationController: AppDelegate.shared.authenticationController)
+            DataController.shared.executeAndSaveOperations([operation], context: AppDelegate.shared.managedObjectContext, handler: { (error: Error?) -> Void in
+                DispatchQueue.main.async(execute: { () -> Void in
+                    if error != nil {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentErrorMessage("Error Ignoring Reports!")
+                        }
+                    } else {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentModeratorSuccessMessage("Ignored Reports!")
+                        }
+
+                    }
+                })
+            })
+        case .unignoreReports:
+            let operation = post.ignoreReports(false, authenticationController: AppDelegate.shared.authenticationController)
+            DataController.shared.executeAndSaveOperations([operation], context: AppDelegate.shared.managedObjectContext, handler: { (error: Error?) -> Void in
+                DispatchQueue.main.async(execute: { () -> Void in
+                    if error != nil {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentErrorMessage("Error Unignoring Reports!")
+                        }
+                    } else {
+                        if let noticeHandler = self as? NoticeHandling {
+                            noticeHandler.presentModeratorSuccessMessage("Unignored Reports!")
+                        }
+
+                    }
+                })
+            })
+//        case .banUser:
+//            let operation = post.ban(false, authenticationController: AppDelegate.shared.authenticationController)
+//            DataController.shared.executeAndSaveOperations([operation], context: AppDelegate.shared.managedObjectContext, handler: { (error: Error?) -> Void in
+//                DispatchQueue.main.async(execute: { () -> Void in
+//                    if error != nil {
+//                        if let noticeHandler = self as? NoticeHandling {
+//                            noticeHandler.presentErrorMessage("Error Unignoring Reports!")
+//                        }
+//                    } else {
+//                        if let noticeHandler = self as? NoticeHandling {
+//                            noticeHandler.presentModeratorSuccessMessage("Unignored Reports!")
+//                        }
+//
+//                    }
+//                })
+//            })
+//        case .viewReports:
+
+        }
+    }
+
+    fileprivate func getModerateActions(type: moderateType, post: Post) -> [UIAlertAction] {
+        let distinguish = UIAlertAction(title: "Distinguish", style: .default, handler: {_ in self.moderatorActionHandler(action: .distinguish, post: post)})
+        distinguish.setValue(UIImage(named: "distinguish"), forKey: "image")
+        let undistinguish = UIAlertAction(title: "Undistinguish", style: .default, handler: {_ in self.moderatorActionHandler(action: .undistinguish, post: post)})
+        undistinguish.setValue(UIImage(named: "distinguish"), forKey: "image")
+        let sticky = UIAlertAction(title: "Sticky", style: .default, handler: {_ in self.moderatorActionHandler(action: .sticky, post: post)})
+        sticky.setValue(UIImage(named: "sticky"), forKey: "image")
+        let unsticky = UIAlertAction(title: "Unsticky", style: .default, handler: {_ in self.moderatorActionHandler(action: .unsticky, post: post)})
+        unsticky.setValue(UIImage(named: "sticky"), forKey: "image")
+        let approve = UIAlertAction(title: "Approve", style: .default, handler: {_ in  self.moderatorActionHandler(action: .approve, post: post)})
+        approve.setValue(UIImage(named: "approve"), forKey: "image")
+        let reapprove = UIAlertAction(title: "Reapprove", style: .default, handler: {_ in self.moderatorActionHandler(action: .reapprove, post: post)})
+        reapprove.setValue(UIImage(named: "approve"), forKey: "image")
+        let remove = UIAlertAction(title: "Remove", style: .default, handler: {_ in self.moderatorActionHandler(action: .remove, post: post)})
+        remove.setValue(UIImage(named: "remove"), forKey: "image")
+        let markSpam = UIAlertAction(title: "Mark Spam", style: .default, handler: {_ in self.moderatorActionHandler(action: .markSpam, post: post)})
+        markSpam.setValue(UIImage(named: "spam"), forKey: "image")
+        let markNsfw = UIAlertAction(title: "Mark NSFW", style: .default, handler: {_ in self.moderatorActionHandler(action: .markNsfw, post: post)})
+        markNsfw.setValue(UIImage(named: "nsfw"), forKey: "image")
+        let markSpoiler = UIAlertAction(title: "Mark Spoiler", style: .default, handler: {_ in self.moderatorActionHandler(action: .markSpoiler, post: post)})
+        markSpoiler.setValue(UIImage(named: "spoiler"), forKey: "image")
+        let unmarkSpam = UIAlertAction(title: "Unmark Spam", style: .default, handler: {_ in self.moderatorActionHandler(action: .unmarkSpam, post: post)})
+        unmarkSpam.setValue(UIImage(named: "spam"), forKey: "image")
+        let unmarkNsfw = UIAlertAction(title: "Unmark NSFW", style: .default, handler: {_ in self.moderatorActionHandler(action: .unmarkNsfw, post: post)})
+        unmarkNsfw.setValue(UIImage(named: "nsfw"), forKey: "image")
+        let unmarkSpoiler = UIAlertAction(title: "Unmark Spoiler", style: .default, handler: {_ in self.moderatorActionHandler(action: .unmarkSpoiler, post: post)})
+        unmarkSpoiler.setValue(UIImage(named: "spoiler"), forKey: "image")
+        let setPostFlair = UIAlertAction(title: "Set Post Flair", style: .default, handler: nil/*{_ in self.moderatorActionHandler(action: .setPostFlair, post: post)}*/)
+        setPostFlair.setValue(UIImage(named: "flair"), forKey: "image")
+        let announce = UIAlertAction(title: "Announce", style: .default, handler: {_ in self.moderatorActionHandler(action: .announce, post: post)})
+        announce.setValue(UIImage(named: "announce"), forKey: "image")
+        let unannounce = UIAlertAction(title: "Unannounce", style: .default, handler: {_ in self.moderatorActionHandler(action: .unannounce, post: post)})
+        unannounce.setValue(UIImage(named: "announce"), forKey: "image")
+        let lock = UIAlertAction(title: "Lock", style: .default, handler: {_ in self.moderatorActionHandler(action: .lock, post: post)})
+        lock.setValue(UIImage(named: "lock"), forKey: "image")
+        let unlock = UIAlertAction(title: "Unlock", style: .default, handler: {_ in self.moderatorActionHandler(action: .unlock, post: post)})
+        unlock.setValue(UIImage(named: "unlock"), forKey: "image")
+        let ignoreReports = UIAlertAction(title: "Ignore Reports", style: .default, handler: {_ in self.moderatorActionHandler(action: .ignoreReports, post: post)})
+        ignoreReports.setValue(UIImage(named: "ignoreReports"), forKey: "image")
+        let unignoreReports = UIAlertAction(title: "Unignore Reports", style: .default, handler: {_ in self.moderatorActionHandler(action: .unignoreReports, post: post)})
+        unignoreReports.setValue(UIImage(named: "ignoreReports"), forKey: "image")
+        let banUser = UIAlertAction(title: "Ban User", style: .default, handler: nil/*{_ in self.moderatorActionHandler(action: .banUser, post: post)}*/)
+        banUser.setValue(UIImage(named: "ban"), forKey: "image")
+        let viewReports = UIAlertAction(title: "View Reports", style: .default, handler: nil/*{_ in self.moderatorActionHandler(action: .viewReports, post: post)}*/)
+        viewReports.setValue(UIImage(named: "report"), forKey: "image")
+
+        var actions: [UIAlertAction] = []
+        let reports = post.numReports
+        
+        var approved = false
+        if post.approved == 1 {
+            approved = true
+        }
+        
+        var hasReports = false
+        if reports as! Int >= 1 {
+            hasReports = true
+        }
+        
+        var removed = false
+        if post.removed == 1 {
+            removed = true
+        }
+        
+        var distinguished = false
+        if post.distinguished != nil {
+            distinguished = true
+        }
+        
+        var isOwner = false
+        if  AppDelegate.shared.authenticationController.activeUser(AppDelegate.shared.managedObjectContext)?.username == post.author {
+            isOwner = true
+        }
+        
+        var locked = false
+        if post.locked == 1 {
+            locked = true
+        }
+        
+        var reapproveNeeded = false
+        //        if post.reapproveNeeded == 1 {
+        //            reapproveNeeded = true
+        //        }
+        
+        var markedSpam = false
+        if post.spam == 1 {
+            markedSpam = true
+        }
+        
+        var markedNsfw = false
+        if post.isContentNSFW == 1 {
+            markedNsfw = true
+        }
+        
+        var markedSpoiler = false
+        if post.isContentSpoiler == 1 {
+            markedSpoiler = true
+        }
+        
+        var stickied = false
+        if post.stickied == 1 {
+            stickied = true
+        }
+        
+        var reportsIgnored = false
+        if post.ignoreReports == 1 {
+            reportsIgnored = true
+        }
+        
+        
+        
+        if isOwner {
+            if distinguished {
+                actions.append(undistinguish)
+            } else {
+                actions.append(distinguish)
+            }
+        }
+        if approved {
+            actions.append(remove)
+        } else if reapproveNeeded {
+            actions.append(reapprove)
+            actions.append(remove)
+        } else {
+            actions.append(approve)
+        }
+        if removed {
+            actions.append(remove)
+        }
+        if markedSpam {
+            actions.append(unmarkSpam)
+        } else {
+            actions.append(markSpam)
+        }
+        if markedNsfw {
+            actions.append(unmarkNsfw)
+        } else {
+            actions.append(markNsfw)
+        }
+        if markedSpoiler {
+            actions.append(unmarkSpoiler)
+        } else {
+            actions.append(markSpoiler)
+        }
+        actions.append(setPostFlair)
+        if stickied {
+            actions.append(unannounce)
+        } else {
+            actions.append(announce)
+        }
+        if locked {
+            actions.append(unlock)
+        } else {
+            actions.append(lock)
+        }
+        if hasReports {
+            actions.append(viewReports)
+        }
+        if reportsIgnored {
+            actions.append(unignoreReports)
+        } else {
+            actions.append(ignoreReports)
+        }
+        if hasReports {
+            actions.append(viewReports)
+        }
+        actions.append(banUser)
+        
+        return actions
+    }
+    
+    func moderate(post: Post) -> BeamAlertController {
+        var approvedByString = ""
+        print(post)
+        if post.approved == 1 {
+            if let approvedBy = post.approvedBy {
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateStyle = .short
+                dateFormatter.timeStyle = .short
+
+                if let date = post.approvedAtUtc {
+                    let postApprovedAt = dateFormatter.string(from: date as Date)
+                    print(postApprovedAt)
+                    approvedByString = "Approved by: \(approvedBy) at \(postApprovedAt)"
+                } else {
+                    print("There was an error decoding the string")
+                    approvedByString = "Approved by: \(approvedBy)"
+                }
+
+            }
+        }
+        var removedByString = ""
+
+        if post.removed == 1 {
+            if let removedBy = post.bannedBy {
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateStyle = .short
+                dateFormatter.timeStyle = .short
+
+                if let date = post.bannedAtUtc {
+                    let postRemovedAt = dateFormatter.string(from: date as Date)
+                    print(postRemovedAt)
+                    removedByString = "Removed by: \(removedBy) at \(postRemovedAt)"
+                } else {
+                    print("There was an error decoding the string")
+                    removedByString = "Removed by: \(removedBy)"
+                }
+
+            }
+        }
+
+        let alert = BeamAlertController(title: approvedByString, message: nil, preferredStyle: .actionSheet)
+        for action in getModerateActions(type: moderateType.post, post: post) {
+            alert.addAction(action)
+        }
+        alert.addCancelAction()
+        alert.view.tintColor = #colorLiteral(red: 0.3047083318, green: 0.6231384277, blue: 0.2308172882, alpha: 1)
+        return alert
+    }
     
     fileprivate func presentVoteError(_ error: Error?) {
         if let error = error as NSError? {
@@ -177,7 +752,7 @@ extension PostToolbarViewDelegate where Self: UIViewController {
                 }
             }
         }
-
+        
     }
     
     func  visibleSubredditForToolbarView(_ toolbarView: PostToolbarView) -> Subreddit? {
@@ -187,7 +762,7 @@ extension PostToolbarViewDelegate where Self: UIViewController {
 }
 
 class PostToolbarView: BeamView {
-
+    
     weak var delegate: PostToolbarViewDelegate?
     
     var popoverController: UIPopoverPresentationController?
@@ -234,6 +809,21 @@ class PostToolbarView: BeamView {
         return button
     }()
     
+    fileprivate let moderatorButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(named: "moderator"), for: UIControlState())
+        button.tintColor = #colorLiteral(red: 0.3047083318, green: 0.6231384277, blue: 0.2308172882, alpha: 1)
+        return button
+    }()
+    fileprivate let reportsButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(named: "report"), for: UIControlState())
+        button.setTitle("reports", for: UIControlState())
+        
+        button.tintColor = #colorLiteral(red: 1, green: 0.8392156863, blue: 0.03921568627, alpha: 1)
+        return button
+    }()
+    
     fileprivate let upvoteButton: VoteButton = {
         let voteButton = VoteButton()
         voteButton.arrowDirection = .up
@@ -259,15 +849,18 @@ class PostToolbarView: BeamView {
     }
     
     fileprivate func setupView() {
+        
         self.isOpaque = true
         self.layoutMargins = UIEdgeInsets(top: 0, left: 20, bottom: 0, right: 12)
         
         self.configureLabeledButton(self.commentsButton)
         self.configureLabeledButton(self.pointsButton)
-        
+        self.configureLabeledButton(self.reportsButton)
+
         self.commentsButton.addTarget(self, action: #selector(PostToolbarView.viewComments(_:)), for: .touchUpInside)
         self.pointsButton.addTarget(self, action: #selector(PostToolbarView.viewPoints(_:)), for: .touchUpInside)
         self.moreButton.addTarget(self, action: #selector(PostToolbarView.more(_:)), for: .touchUpInside)
+        self.moderatorButton.addTarget(self, action: #selector(PostToolbarView.moderator(_:)), for: .touchUpInside)
         self.downvoteButton.addTarget(self, action: #selector(PostToolbarView.downvote(_:)), for: .touchUpInside)
         self.upvoteButton.addTarget(self, action: #selector(PostToolbarView.upvote(_:)), for: .touchUpInside)
         
@@ -280,19 +873,29 @@ class PostToolbarView: BeamView {
         self.tintedButtons.append(self.moreButton)
         self.addSubview(self.moreButton)
         
+
+        self.tintedButtons.append(self.moderatorButton)
+        self.addSubview(self.moderatorButton)
+
+        self.addSubview(self.reportsButton)
+
+        
+        
         self.addSubview(self.downvoteButton)
         
         self.addSubview(self.upvoteButton)
-
+        
     }
     
     fileprivate func updateContent() {
         self.commentsButton.setTitle("\(self.post?.commentCount?.intValue ?? 0)", for: UIControlState.normal)
         self.pointsButton.setTitle(self.pointsTitle(), for: UIControlState.normal)
-            
+        self.reportsButton.setTitle("×\(self.post?.numReports?.intValue ?? 0)", for: UIControlState.normal)
         self.upvoteButton.voted = self.post?.voteStatus?.intValue == VoteStatus.up.rawValue
         self.downvoteButton.voted = self.post?.voteStatus?.intValue == VoteStatus.down.rawValue
-        
+        self.moderatorButton.isHidden = self.post?.canModPost != 1
+        self.reportsButton.isHidden = self.post?.canModPost != 1
+
         self.setNeedsLayout()
     }
     
@@ -342,6 +945,12 @@ class PostToolbarView: BeamView {
         }
     }
     
+    @objc func moderator(_ sender: UIButton?) {
+        if let post = self.post {
+            self.delegate?.postToolbarView(self, didTapModeratorOnPost: post)
+        }
+    }
+    
     @objc func upvote(_ sender: UIButton?) {
         if let post = self.post, !self.upvoteButton.animating && !self.downvoteButton.animating {
             self.delegate?.postToolbarView(self, didTapUpvoteOnPost: post)
@@ -384,9 +993,9 @@ class PostToolbarView: BeamView {
         self.upvoteButton.color = tintColor
         self.downvoteButton.color = tintColor
         if self.tintAdjustmentMode != UIViewTintAdjustmentMode.normal {
-        	self.tintAdjustmentMode = UIViewTintAdjustmentMode.normal
+            self.tintAdjustmentMode = UIViewTintAdjustmentMode.normal
         }
-
+        
         UIView.performWithoutAnimation { () -> Void in
             for button in self.tintedButtons {
                 if button.tintColor != tintColor {
@@ -420,6 +1029,7 @@ class PostToolbarView: BeamView {
                 }
                 view.isOpaque = self.isOpaque
             }
+            self.moderatorButton.tintColor = #colorLiteral(red: 0.3047083318, green: 0.6231384277, blue: 0.2308172882, alpha: 1)
             
             //Call setNeedsDisplay to update the seperator
             self.setNeedsDisplay()
@@ -427,13 +1037,13 @@ class PostToolbarView: BeamView {
             self.setNeedsLayout()
         }
     }
-
+    
     override func tintColorDidChange() {
         super.tintColorDidChange()
         /*
-        This works around a bug with UIAlertController and UIAlertView in iOS 8.
-        Sometimes after returning the views have the color of the UIWindow they are on, instead of the custom set tintColor or the superview tintColor
-        */
+         This works around a bug with UIAlertController and UIAlertView in iOS 8.
+         Sometimes after returning the views have the color of the UIWindow they are on, instead of the custom set tintColor or the superview tintColor
+         */
         UIView.performWithoutAnimation { () -> Void in
             self.tintAdjustmentMode = .normal
             for button in self.tintedButtons {
@@ -477,6 +1087,17 @@ class PostToolbarView: BeamView {
         pointsButtonSize.width += 20
         let pointsButtonFrame = CGRect(origin: CGPoint(x: xPosition, y: (self.bounds.size.height - pointsButtonSize.height) / 2), size: pointsButtonSize)
         self.pointsButton.frame = pointsButtonFrame
+
+        xPosition += pointsButtonSize.width + buttonSpacing
+
+        xPosition -= 20
+
+        var reportsButtonSize = self.reportsButton.intrinsicContentSize
+        reportsButtonSize.height = barHeight
+        reportsButtonSize.width += 20
+        let reportsButtonFrame = CGRect(origin: CGPoint(x: xPosition, y: (self.bounds.size.height - reportsButtonSize.height) / 2), size: reportsButtonSize)
+        self.reportsButton.frame = reportsButtonFrame
+
     }
     
     func layoutRightSideButtons() {
@@ -513,5 +1134,14 @@ class PostToolbarView: BeamView {
         moreButtonSize.width += 20
         let moreButtonFrame = CGRect(origin: CGPoint(x: xPosition - moreButtonSize.width, y: (self.bounds.size.height - moreButtonSize.height) / 2), size: moreButtonSize)
         self.moreButton.frame = moreButtonFrame
+        xPosition -= moreButtonSize.width + buttonSpacing
+        xPosition += 20
+        
+        var moderatorButtonSize = self.moderatorButton.intrinsicContentSize
+        moderatorButtonSize.height = barHeight
+        moderatorButtonSize.width += 20
+        let moderatorButtonFrame = CGRect(origin: CGPoint(x: xPosition - moderatorButtonSize.width, y: (self.bounds.size.height - moderatorButtonSize.height) / 2), size: moderatorButtonSize)
+        self.moderatorButton.frame = moderatorButtonFrame
+
     }
 }

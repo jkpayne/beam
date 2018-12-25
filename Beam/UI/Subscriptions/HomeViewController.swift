@@ -29,6 +29,10 @@ final class HomeViewController: BeamViewController, UIToolbarDelegate {
     lazy private var multiredditsViewController: MultiredditsViewController = {
         return MultiredditsViewController(style: .grouped)
     }()
+
+    lazy private var moderatorSubredditsViewController: ModeratorSubredditsViewController = {
+        return ModeratorSubredditsViewController(style: .plain)
+    }()
     
     var currentViewController: UIViewController! {
         didSet {
@@ -39,11 +43,14 @@ final class HomeViewController: BeamViewController, UIToolbarDelegate {
                 self.navigationController?.navigationBar.setItems([currentViewController.navigationItem], animated: false)
                 self.subredditsViewController.view.isHidden = currentViewController != self.subredditsViewController
                 self.multiredditsViewController.view.isHidden = currentViewController != self.multiredditsViewController
+                self.moderatorSubredditsViewController.view.isHidden = currentViewController != self.moderatorSubredditsViewController
                 
                 if currentViewController == self.subredditsViewController {
                     self.buttonBar.selectedItemIndex = 0
-                } else {
+                } else if currentViewController == self.multiredditsViewController {
                     self.buttonBar.selectedItemIndex = 1
+                } else {
+                    self.buttonBar.selectedItemIndex = 2
                 }
             }
         }
@@ -67,7 +74,21 @@ final class HomeViewController: BeamViewController, UIToolbarDelegate {
         if self.touchForwardingView == nil {
             self.touchForwardingView = self.multiredditsViewController.tableView.expandScrollArea()
         }
+        self.view.insertSubview(self.moderatorSubredditsViewController.view, belowSubview: self.toolbar)
+        self.addChildViewController(self.moderatorSubredditsViewController)
+        self.moderatorSubredditsViewController.didMove(toParentViewController: self)
 
+        self.addContainerViewConstraints(viewController: self.moderatorSubredditsViewController, containerView: self.view)
+
+        self.view.insertSubview(self.subredditsViewController.view, belowSubview: self.toolbar)
+        self.addChildViewController(self.subredditsViewController)
+        self.subredditsViewController.didMove(toParentViewController: self)
+
+        self.addContainerViewConstraints(viewController: self.subredditsViewController, containerView: self.view)
+
+        if self.touchForwardingView == nil {
+            self.touchForwardingView = self.moderatorSubredditsViewController.tableView.expandScrollArea()
+        }
     }
 
     override func viewDidLoad() {
@@ -75,7 +96,7 @@ final class HomeViewController: BeamViewController, UIToolbarDelegate {
         
         self.setupView()
         
-        self.buttonBar.items = [ButtonBarButton(title: AWKLocalizedString("subreddits-title")), ButtonBarButton(title: AWKLocalizedString("multireddits-title"))]
+        self.buttonBar.items = [ButtonBarButton(title: AWKLocalizedString("subreddits-title")), ButtonBarButton(title: AWKLocalizedString("multireddits-title")), ButtonBarButton(title: "Moderated Subreddits")]
         self.buttonBar.addTarget(self, action: #selector(HomeViewController.buttonBarChanged(_:)), for: UIControlEvents.valueChanged)
         self.buttonBar.selectedItemIndex = UserSettings[.subscriptionsListType] == "multireddits" ? 1: 0
         
@@ -114,8 +135,16 @@ final class HomeViewController: BeamViewController, UIToolbarDelegate {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        
-        self.currentViewController = self.buttonBar.selectedItemIndex == 1 ? self.multiredditsViewController: self.subredditsViewController
+
+        switch self.buttonBar.selectedItemIndex {
+        case 1:
+           self.currentViewController = self.multiredditsViewController
+        case 2:
+           self.currentViewController = self.moderatorSubredditsViewController
+        default:
+           self.currentViewController = self.subredditsViewController
+        }
+//        self.currentViewController = self.buttonBar.selectedItemIndex == 1 ? self.multiredditsViewController: self.subredditsViewController
     }
     
     override func viewDidLayoutSubviews() {
@@ -133,11 +162,17 @@ final class HomeViewController: BeamViewController, UIToolbarDelegate {
         if self.subredditsViewController.tableView.contentOffset.y <= 0 {
             self.subredditsViewController.tableView.contentOffset = CGPoint(x: 0, y: -1 * contentInsets.top)
         }
-        
+
         self.multiredditsViewController.tableView.contentInset = contentInsets
         self.multiredditsViewController.tableView.scrollIndicatorInsets = contentInsets
         if self.multiredditsViewController.tableView.contentOffset.y <= 0 {
             self.multiredditsViewController.tableView.contentOffset = CGPoint(x: 0, y: -1 * contentInsets.top)
+        }
+
+        self.moderatorSubredditsViewController.tableView.contentInset = contentInsets
+        self.moderatorSubredditsViewController.tableView.scrollIndicatorInsets = contentInsets
+        if self.moderatorSubredditsViewController.tableView.contentOffset.y <= 0 {
+            self.moderatorSubredditsViewController.tableView.contentOffset = CGPoint(x: 0, y: -1 * contentInsets.top)
         }
     }
     
@@ -150,11 +185,22 @@ final class HomeViewController: BeamViewController, UIToolbarDelegate {
     // MARK: - Actions
     
     @objc fileprivate func buttonBarChanged(_ sender: ButtonBar) {
-        if sender.selectedItemIndex == 1 {
-            self.currentViewController = self.multiredditsViewController
-        } else {
+        switch sender.selectedItemIndex {
+        case 0:
+             self.currentViewController = self.subredditsViewController
+        case 1:
+             self.currentViewController = self.multiredditsViewController
+        case 2:
+            self.currentViewController = self.moderatorSubredditsViewController
+        default:
             self.currentViewController = self.subredditsViewController
         }
+//        if sender.selectedItemIndex == 1 {
+//            self.currentViewController = self.multiredditsViewController
+//        } else {
+//            self.currentViewController = self.subredditsViewController
+//        }
+
     }
 
 }

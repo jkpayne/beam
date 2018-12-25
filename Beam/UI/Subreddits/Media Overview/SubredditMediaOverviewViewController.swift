@@ -679,7 +679,8 @@ extension SubredditMediaOverviewViewController: SubredditMediaCollectionControll
                 if let error = controller.error as NSError?, error.code == NSURLErrorNotConnectedToInternet && error.domain == NSURLErrorDomain {
                     self.presentErrorMessage(AWKLocalizedString("error-loading-posts-internet"))
                 } else {
-                    self.presentErrorMessage(AWKLocalizedString("error-loading-posts"))
+                    print(controller.error)
+                    self.presentErrorMessage("Description: \(controller.error.debugDescription)")
                 }
             }
 

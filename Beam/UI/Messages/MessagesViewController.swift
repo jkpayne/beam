@@ -418,7 +418,8 @@ extension MessagesViewController {
                         if error.code == NSURLErrorNotConnectedToInternet && error.domain == NSURLErrorDomain {
                             self?.presentErrorMessage(AWKLocalizedString("error-loading-posts-internet"))
                         } else {
-                            self?.presentErrorMessage(AWKLocalizedString("error-loading-posts"))
+                            print(error)
+                            self?.presentErrorMessage("Description: \(error.description)")
                         }
                     }
                 })

@@ -50,9 +50,32 @@ open class Content: SyncObject {
         return "Content"
     }
 
+    fileprivate func parseReports(_ json: NSDictionary, key: String) -> [String: Int] {
+        if let reports = json[key] as? NSArray {
+            var reportsDict: [String: Int] = [:]
+            for reportReason in reports {
+                let report = reportReason as! NSArray
+                reportsDict[report[0] as! String] =  report[1] as? Int
+            }
+            return reportsDict
+        }
+        return [:]
+    }
+    fileprivate func parseModReports(_ json: NSDictionary, key: String) -> [String: String] {
+        if let reports = json[key] as? NSArray {
+            var reportsDict: [String: String] = [:]
+            for reportReason in reports {
+                let report = reportReason as! NSArray
+                reportsDict[report[0] as! String] =  report[1] as? String
+            }
+            return reportsDict
+        }
+        return [:]
+    }
+
     override func parseObject(_ json: NSDictionary, cache: NSCache<NSString, NSManagedObjectID>?) throws {
         try super.parseObject(json, cache: cache)
-        
+
         self.permalink = (json["permalink"] as? String)?.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryAllowed) ?? self.permalink
         self.content = (json["body"] as? String)?.stringByUnescapeHTMLEntities() ?? self.content
         self.downvoteCount = json["downs"] as? NSNumber ?? self.downvoteCount
@@ -77,15 +100,47 @@ open class Content: SyncObject {
         if let likes = json["likes"] as? NSNumber {
             self.voteStatus = NSNumber(value: VoteStatus.statusFromBool(likes.boolValue).rawValue)
         }
-     
         if let creationEpoch = json["created_utc"] as? NSNumber, self.creationDate == nil {
             self.creationDate = Date(timeIntervalSince1970: creationEpoch.doubleValue)
         }
+
+        //Mod
+
+        self.approved = json["approved"] as? NSNumber ?? self.approved
+        if let approvedEpoch = json["approved_at_utc"] as? NSNumber, self.approvedAtUtc == nil {
+            self.approvedAtUtc = Date(timeIntervalSince1970: approvedEpoch.doubleValue) as NSDate
+        }
+
+        self.approvedBy = json["approved_by"] as? String ?? self.approvedBy
+
+        if let bannedAtEpoch = json["banned_at_utc"] as? NSNumber, self.bannedAtUtc == nil {
+            self.bannedAtUtc = Date(timeIntervalSince1970: bannedAtEpoch.doubleValue) as NSDate
+        }
+
+//        self.userReports = json["user_reports"] as? NSArray ?? self.userReports
+        self.bannedBy = json["banned_by"] as? String ?? self.bannedBy
+        self.banNote = json["ban_note"] as? String ?? self.banNote
+        self.canModPost = json["can_mod_post"] as? NSNumber ?? self.canModPost
+        self.ignoreReports = json["ignore_reports"] as? NSNumber ?? self.ignoreReports
+        self.modNote = json["mod_note"] as? String ?? self.modNote
+        self.modReasonBy = json["mod_reason_by"] as? String ?? self.modReasonBy
+        self.modReasonTitle = json["mod_reason_title"] as? String ?? self.modReasonTitle
+        self.removed = json["removed"] as? NSNumber ?? self.removed
+        self.removalReason = json["removal_reason"] as? String ?? self.removalReason
+        self.spam = json["spam"] as? NSNumber ?? self.spam
+        self.distinguished = json["distinguished"] as? String ?? self.distinguished
+        self.modReports = parseModReports(json, key: "mod_reports")
+        self.modReportsDismissed = parseModReports(json, key: "mod_reports_dismissed")
+        self.userReports = parseReports(json, key: "user_reports")
+        self.userReportsDismissed = parseReports(json, key: "user_reports_dismissed")
+        let total = self.userReports!.values.reduce(0, +) + self.userReportsDismissed!.values.reduce(0, +) + self.modReports!.count + self.modReportsDismissed!.count
+        self.numReports = total as NSNumber
+        self.depth = json["depth"] as? NSNumber ?? self.depth
     }
-    
+
     override open func redditDictionaryRepresentation() -> [String: Any] {
         var dictionary = super.redditDictionaryRepresentation()
-        
+
         dictionary["permalink"] = self.permalink as AnyObject?
         dictionary["body"] = self.content as AnyObject?
         dictionary["downs"] = self.downvoteCount
@@ -98,11 +153,34 @@ open class Content: SyncObject {
         dictionary["stickied"] = self.stickied
         dictionary["archived"] = self.archived
         dictionary["locked"] = self.locked
-        
+
         dictionary["likes"] = self.voteStatus?.intValue == 0 ? nil: self.voteStatus?.intValue
-        
+
         dictionary["created_utc"] = self.creationDate?.timeIntervalSince1970 as AnyObject?
-        
+
+        //mod
+        dictionary["user_reports"] = self.userReports
+        dictionary["approved"] = self.approved
+        dictionary["approved_at_utc"] = self.approvedAtUtc?.timeIntervalSince1970 as AnyObject?
+        dictionary["approved_by"] = self.approvedBy
+        dictionary["banned_at_utc"] = self.bannedAtUtc?.timeIntervalSince1970 as AnyObject?
+        dictionary["banned_by"] = self.bannedBy
+        dictionary["ban_note"] = self.banNote
+        dictionary["can_mod_post"] = self.canModPost
+        dictionary["ignore_reports"] = self.ignoreReports
+        dictionary["mod_note"] = self.modNote
+        dictionary["mod_reason_by"] = self.modReasonBy
+        dictionary["mod_reason_title"] = self.modReasonTitle
+        dictionary["mod_reports"] = self.modReports
+        dictionary["num_reports"] = self.numReports
+        dictionary["removed"] = self.removed
+        dictionary["removal_reason"] = self.removalReason
+        dictionary["spam"] = self.spam
+        dictionary["distinguished"] = self.distinguished
+        dictionary["mod_reports_dismissed"] = self.modReportsDismissed
+        dictionary["user_reports_dismissed"] = self.modReportsDismissed
+        dictionary["depth"] = self.depth
+        dictionary["distinguished"] = self.distinguished
         return dictionary
     }
     

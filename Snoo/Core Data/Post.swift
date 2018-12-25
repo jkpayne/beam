@@ -12,28 +12,29 @@ import CoreData
 extension Notification.Name {
     
     public static let PostDidChangeVisitedState = Notification.Name(rawValue: "PostDidChangeVisitedStateNotification")
+    public static let PostDidChangeApprovedState = Notification.Name(rawValue: "PostDidChangeApprovedStateNotification")
     
 }
 
 @objc(Post)
 public final class Post: Content {
 
-    @NSManaged open var commentCount: NSNumber?
+    @NSManaged public var commentCount: NSNumber?
 
-    @NSManaged open var thumbnailUrlString: String?
+    @NSManaged public var thumbnailUrlString: String?
     @NSManaged open var title: String?
-    @NSManaged open var type: NSNumber?
-    @NSManaged open var urlString: String?
+    @NSManaged public var type: NSNumber?
+    @NSManaged public var urlString: String?
     @NSManaged open var collection: PostCollection?
     @NSManaged open var comments: NSSet?
-    @NSManaged open var flairText: String?
-    @NSManaged open var subreddit: Subreddit?
-    @NSManaged open var postMetadata: PostMetadata?
+    @NSManaged public var flairText: String?
+    @NSManaged public var subreddit: Subreddit?
+    @NSManaged public var postMetadata: PostMetadata?
     
     //Required properties with default value
-    @NSManaged open var isContentNSFW: NSNumber //Default: No
+    @NSManaged public var isContentNSFW: NSNumber //Default: No
     @NSManaged open var isContentSpoiler: NSNumber //Default: No
-    @NSManaged open var isSelfText: NSNumber //Default: No
+    @NSManaged public var isSelfText: NSNumber //Default: No
     @NSManaged open var isHidden: NSNumber //Default: No
     
     open class override func entityName() -> String {

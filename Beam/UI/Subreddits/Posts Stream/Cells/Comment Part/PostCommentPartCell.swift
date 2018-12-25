@@ -13,6 +13,7 @@ import RedditMarkdownKit
 
 final class PostCommentPartCell: BeamTableViewCell, PostCell {
 
+    @IBOutlet var approvedButton: UIButton!
     @IBOutlet var commentView: UIView!
     @IBOutlet var authorLabel: UILabel!
     @IBOutlet var contentLabel: TTTAttributedLabel!
@@ -57,7 +58,11 @@ final class PostCommentPartCell: BeamTableViewCell, PostCell {
             } else {
                 self.dateLabel.text = self.comment?.creationDate?.localizedRelativeTimeString
             }
-            
+            if comment?.approved == 1 {
+                approvedButton.alpha = 1
+            } else {
+                approvedButton.alpha = 0
+            }
         }
     }
     

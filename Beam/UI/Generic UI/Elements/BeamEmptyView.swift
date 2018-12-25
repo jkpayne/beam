@@ -137,7 +137,7 @@ class BeamEmptyView: BeamView {
                 if AppDelegate.shared.cherryController.isAdminUser {
                     errorCodeString = "\n(\(error.domain) \(error.code))"
                 } else {
-                    errorCodeString = "\n(\(error.code))"
+                    errorCodeString = "\n(\(error.domain) \(error.code))"
                 }
                 
             }
